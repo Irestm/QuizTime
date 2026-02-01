@@ -1,0 +1,17 @@
+app:
+  name: "Course APP"
+  host: "0.0.0.0"
+  port: 8000
+  secret_key: "asdgsdggstrsr324rwqad"
+  debug: true
+
+database:
+  user: 'user'
+  password: 'password'
+  host: 'db'
+  port: 5432
+  name: 'backend_course'
+
+jwt:
+  access_token_expire_minutes: 30
+  algorithm: "HS256"

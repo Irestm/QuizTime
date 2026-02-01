@@ -1,0 +1,28 @@
+from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+from api.pydantic.models import CreateUserSchema, UserRead
+from infrastructure.repositories.postgresql.user.exceptions import UserIsExist
+from usecase.create_user.abstract import AbstractCreateUserUseCase
+from api.v1.user.dependencies import create_user_use_case 
+
+router = APIRouter(tags=["User"])
+security_scheme = HTTPBearer(scheme_name="Bearer")
+
+@router.post("/users", response_model=UserRead)
+async def create_user(
+    payload: CreateUserSchema,
+    usecase: AbstractCreateUserUseCase = Depends(create_user_use_case)
+) -> JSONResponse:
+    try:
+        user = await usecase.execute(payload)
+    except UserIsExist as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    return JSONResponse(status_code=status.HTTP_201_CREATED, content=user.model_dump())
+
+@router.get("/users/me", response_model=UserRead)
+async def get_user_me(
+    credentials: HTTPAuthorizationCredentials = Depends(security_scheme)
+) -> JSONResponse:
+    return JSONResponse(status_code=status.HTTP_200_OK, content={})

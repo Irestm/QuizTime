@@ -5,17 +5,15 @@ from pydantic import SecretStr
 BASE_DIR = Path(__file__).resolve().parent
 
 class Settings(BaseSettings):
-    # App
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
-    SECRET_KEY: SecretStr = SecretStr("secret_key_for_demo")
+    SECRET_KEY: SecretStr = SecretStr("supersecretkey123")
 
-    # Database
-    POSTGRES_USER: str = "user"
-    POSTGRES_PASSWORD: str = "password"
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "backend_course"
+    POSTGRES_PORT: int = 5433
+    POSTGRES_DB: str = "coursebackend"
 
     REDIS_URL: str = "redis://localhost:6379"
 

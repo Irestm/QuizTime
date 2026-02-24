@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Depends, status, HTTPException,Request
+from fastapi import APIRouter, Depends, status, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
 from api.pydantic.models import CreateUserSchema, UserRead
 from infrastructure.repositories.postgresql.user.exceptions import UserIsExist
+from api.v1.user.dependencies import create_user_use_case
 from usecase.create_user.abstract import AbstractCreateUserUseCase
-from api.v1.user.dependencies import create_user_use_case 
 from usecase.create_user.fast_implementation import RedisFastCreateUserUseCase
+
 router = APIRouter(tags=["User"])
 security_scheme = HTTPBearer(scheme_name="Bearer")
 

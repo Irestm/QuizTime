@@ -12,7 +12,6 @@ logger = logging.getLogger("Worker")
 BATCH_SIZE = 1000
 QUEUE_KEY = "registration_queue"
 
-
 async def run_worker():
     db_url = settings.get_database_url() + "?prepared_statement_cache_size=0"
     logger.info(f"🔌 Connecting to DB via: {db_url}")
@@ -37,16 +36,14 @@ async def run_worker():
                 await asyncio.sleep(0.05)
                 continue
 
-            # Парсим JSON
             users = [json.loads(x) for x in raw_list]
 
-            # Вставляем в БД
             if users:
                 async with engine.begin() as conn:
                     stmt = text("""
                                 INSERT INTO users (username, email, full_name, password, biography)
-                                VALUES (:username, :email, :full_name, :password,
-                                        :biography) ON CONFLICT (username) DO NOTHING
+                                VALUES (:username, :email, :full_name, :password, :biography) 
+                                ON CONFLICT (username) DO NOTHING
                                 """)
                     await conn.execute(stmt, users)
 
@@ -55,7 +52,6 @@ async def run_worker():
         except Exception as e:
             logger.error(f"❌ Error: {e}")
             await asyncio.sleep(1)
-
 
 if __name__ == "__main__":
     try:

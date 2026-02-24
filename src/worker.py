@@ -5,6 +5,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
 from settings import settings
+from infrastructure.security.password import get_password_hash
 
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger("Worker")
@@ -36,7 +37,11 @@ async def run_worker():
                 await asyncio.sleep(0.05)
                 continue
 
-            users = [json.loads(x) for x in raw_list]
+            users = []
+            for x in raw_list:
+                user_data = json.loads(x)
+                user_data['password'] = get_password_hash(user_data['password'])
+                users.append(user_data)
 
             if users:
                 async with engine.begin() as conn:

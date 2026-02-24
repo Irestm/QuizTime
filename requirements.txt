@@ -59,3 +59,4 @@ gunicorn==23.0.0
 orjson>=3.10.0
 redis==5.0.1
 psutil
+uvloop==0.22.1

@@ -1,8 +1,8 @@
-from locust import HttpUser, task, constant
+from locust import FastHttpUser, task, constant
 import random
 
-class User(HttpUser):
-    wait_time = constant(0) 
+class User(FastHttpUser):
+    wait_time = constant(0.1)
     host = "http://localhost:8000"
 
     @task

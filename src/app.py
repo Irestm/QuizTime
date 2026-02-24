@@ -7,20 +7,22 @@ from container import Container
 
 container = Container()
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     sessionmanager = container.session_manager()
     sessionmanager.init(settings.get_database_url())
 
-    app.state.redis = Redis.from_url(settings.get_redis_url())
+    app.state.redis = Redis.from_url(
+        settings.get_redis_url(),
+        max_connections=1000,
+        decode_responses=True
+    )
 
     try:
         yield
     finally:
         await app.state.redis.aclose()
         await sessionmanager.close()
-
 
 container.wire(
     modules=[

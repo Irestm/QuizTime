@@ -1,4 +1,5 @@
 services:
+  # --- База данных ---
   db:
     image: postgres:16-alpine
     container_name: backend_course_postgres
@@ -12,10 +13,12 @@ services:
       - course_net
     healthcheck:
       test: ["CMD-SHELL", "sh -c 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}'"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    command: postgres -c 'max_connections=1000'
 
+  # --- Пул соединений (для HighLoad) ---
   pgbouncer:
     image: edoburu/pgbouncer
     container_name: backend_course_pgbouncer
@@ -24,7 +27,7 @@ services:
       - AUTH_TYPE=scram-sha-256
       - POOL_MODE=transaction
       - MAX_CLIENT_CONN=5000
-      - DEFAULT_POOL_SIZE=40
+      - DEFAULT_POOL_SIZE=50
       - ADMIN_USERS=postgres
     ports:
       - "5433:5432"
@@ -33,18 +36,28 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
 
+  # --- Очередь задач ---
   redis:
     image: redis:7-alpine
     container_name: backend_course_redis
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
       - course_net
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
 
+  # --- Основное API (FastAPI) ---
   app:
     build:
       context: ..
@@ -56,6 +69,9 @@ services:
       - POSTGRES_HOST=pgbouncer
       - POSTGRES_PORT=5432
       - REDIS_URL=redis://redis:6379
+    command: >
+     sh -c "python init_db.py && 
+           gunicorn app:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:9100"
     ports:
       - "8000:9100"
     networks:
@@ -63,6 +79,38 @@ services:
     depends_on:
       - pgbouncer
       - redis
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  # --- Фоновый Воркер  ---
+  worker:
+    build:
+      context: ..
+      dockerfile: build/Dockerfile
+    container_name: backend_course_worker
+    env_file:
+      - ../.env
+    environment:
+      - POSTGRES_HOST=pgbouncer
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379
+    command: python worker.py
+    networks:
+      - course_net
+    depends_on:
+      - app
+      - redis
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
 volumes:
   db_data:

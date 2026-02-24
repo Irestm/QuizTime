@@ -4,18 +4,48 @@ services:
     container_name: backend_course_postgres
     env_file:
       - ../config/.env
-    ports:
-      - "5433:5432"
+    expose:
+      - "5432"
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./init:/docker-entrypoint-initdb.d
     networks:
       - course_net
     healthcheck:
-      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}'"]
       interval: 10s
       timeout: 3s
       retries: 3
+
+  pgbouncer:
+    image: edoburu/pgbouncer
+    container_name: backend_course_pgbouncer
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - AUTH_TYPE=scram-sha-256
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=5000
+      - DEFAULT_POOL_SIZE=40
+      - ADMIN_USERS=${POSTGRES_USER}
+    ports:
+      - "5433:5432"
+    networks:
+      - course_net
+    depends_on:
+      db:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    container_name: backend_course_redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - course_net
 
   app:
     build:
@@ -24,16 +54,21 @@ services:
     container_name: backend_course_app
     env_file:
       - ../config/.env
+    environment:
+      - POSTGRES_HOST=pgbouncer
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379
     ports:
       - "8000:9100"
     networks:
       - course_net
     depends_on:
-      db:
-        condition: service_healthy
+      - pgbouncer
+      - redis
 
 volumes:
   db_data:
+  redis_data:
 
 networks:
   course_net:

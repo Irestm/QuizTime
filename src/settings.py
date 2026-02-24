@@ -1,58 +1,29 @@
-import yaml
 from pathlib import Path
 from pydantic_settings import BaseSettings
 from pydantic import SecretStr
 
-DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 BASE_DIR = Path(__file__).resolve().parent
 
-__all__ = ("BASE_DIR", "DATETIME_FORMAT", "settings")
+class Settings(BaseSettings):
+    # App
+    APP_HOST: str = "0.0.0.0"
+    APP_PORT: int = 8000
+    SECRET_KEY: SecretStr = SecretStr("secret_key_for_demo")
 
+    # Database
+    POSTGRES_USER: str = "user"
+    POSTGRES_PASSWORD: str = "password"
+    POSTGRES_HOST: str = "localhost"
+    POSTGRES_PORT: int = 5432
+    POSTGRES_DB: str = "backend_course"
 
-class _AppSettings(BaseSettings):
-    name: str = "Course APP"
-    host: str = '0.0.0.0'
-    port: int = 8000
-    secret_key: SecretStr
-    debug: bool = True
+    REDIS_URL: str = "redis://localhost:6379"
 
-    def get_app_url(self):
-        return f"http://{self.host}:{self.port}"
+    def get_database_url(self, use_async: bool = True):
+        driver = "postgresql+asyncpg" if use_async else "postgresql"
+        return f"{driver}://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
+    def get_redis_url(self):
+        return self.REDIS_URL
 
-class _DatabaseSettings(BaseSettings):
-    user: str
-    password: SecretStr
-    host: str = 'localhost'
-    port: int = 5432
-    name: str = 'postgres'
-
-    def get_database_url(self):
-        return f"postgresql+asyncpg://{self.user}:{self.password.get_secret_value()}@{self.host}:{self.port}/{self.name}"
-
-
-class _JWTSettings(BaseSettings):
-    access_token_expire_minutes: int = 30
-    algorithm: str = "HS256"
-
-
-class _Settings(BaseSettings):
-    app: _AppSettings
-    database: _DatabaseSettings
-    jwt: _JWTSettings
-
-    @classmethod
-    def load(cls) -> "_Settings":
-        path = Path(BASE_DIR.parent.parent, "config", "config.yaml")
-
-        if not path.exists():
-            path = Path(BASE_DIR.parent, "config", "config.yaml")
-
-        if path.exists():
-            with open(path) as file:
-                return cls(**yaml.safe_load(file))
-
-        raise FileNotFoundError(f"Could not find config.yaml in {path}")
-
-
-settings = _Settings.load()
+settings = Settings()

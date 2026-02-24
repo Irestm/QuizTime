@@ -1,6 +1,8 @@
 import re
+import time
+from concurrent.futures import ProcessPoolExecutor
 
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,6 +10,10 @@ from api.pydantic.models import CreateUserSchema, UserRead, UserLoginSchema
 from api.v1.user.crypto import context
 from infrastructure.databases.postgresql.models import User
 from infrastructure.repositories.postgresql.user.exceptions import UserIsExist, UserNotFound
+
+
+def _hash_worker(password: str) -> str:
+    return context.hash(password)
 
 
 class PostgreSQLUserRepository:
@@ -56,3 +62,26 @@ class PostgreSQLUserRepository:
         stmt = select(User).where(User.username == username)
         result = await self._session.execute(stmt)
         return result.scalars().first()
+
+    async def bulk_create_users(self, count: int = 1000):
+        run_id = int(time.time())
+        raw_passwords = [f"password_{run_id}_{i}" for i in range(count)]
+
+        with ProcessPoolExecutor() as executor:
+            hashed_passwords = list(executor.map(_hash_worker, raw_passwords))
+
+        users_data = []
+        for i in range(count):
+            users_data.append({
+                "username": f"real_user_{run_id}_{i}",
+                "full_name": f"Real User {i}",
+                "email": f"real_{run_id}_{i}@prod.com",
+                "biography": "Unique hash generated via multiprocessing",
+                "password": hashed_passwords[i]
+            })
+
+        stmt = insert(User).values(users_data)
+        await self._session.execute(stmt)
+        await self._session.commit()
+
+        return len(users_data)

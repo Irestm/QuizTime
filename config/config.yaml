@@ -6,11 +6,11 @@ app:
   debug: true
 
 database:
-  user: 'user'
-  password: 'password'
+  user: 'postgres'
+  password: 'postgres'
   host: 'db'
   port: 5432
-  name: 'backend_course'
+  name: 'coursebackend'
 
 jwt:
   access_token_expire_minutes: 30

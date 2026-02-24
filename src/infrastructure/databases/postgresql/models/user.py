@@ -1,8 +1,7 @@
 from typing import Optional, List
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String
-
+from sqlalchemy import String, Index
 from ..base import Base
 
 
@@ -10,12 +9,12 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    username: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
-    full_name: Mapped[str] = mapped_column(String(128))
-    email: Mapped[str] = mapped_column(unique=True, nullable=False)
-    biography: Mapped[str] = mapped_column(String(1000))
-    password: Mapped[str] = mapped_column(String(255), nullable=False)
 
+    username: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
+    full_name: Mapped[str] = mapped_column(String(128))
+    email: Mapped[str] = mapped_column(unique=True, index=True, nullable=False)
+    biography: Mapped[str] = mapped_column(String(1000), nullable=True)
+    password: Mapped[str] = mapped_column(String(255), nullable=False)
     tokens: Mapped[list["Token"]] = relationship(
         back_populates="user",
         cascade="all, delete, delete-orphan",
@@ -24,4 +23,8 @@ class User(Base):
     folders: Mapped[List["Folder"]] = relationship(
         back_populates="user",
         cascade="all, delete, delete-orphan"
+    )
+
+    __table_args__ = (
+        Index("idx_user_lookup", "username", "email"),
     )

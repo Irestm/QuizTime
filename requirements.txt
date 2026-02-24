@@ -55,3 +55,7 @@ websockets==15.0.1
 python-jose[cryptography]
 passlib==1.7.4
 bcrypt==4.0.1
+gunicorn==23.0.0
+orjson>=3.10.0
+redis==5.0.1
+psutil
